@@ -49,7 +49,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   height: 50px;
   border: none;
   border-radius: 12px;
@@ -68,10 +67,6 @@
 .login-kakao-btn:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-.login-kakao-icon {
-  font-size: 18px;
 }
 
 .login-error {

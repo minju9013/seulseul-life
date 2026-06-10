@@ -45,7 +45,6 @@ function Login() {
           onClick={handleKakao}
           disabled={submitting}
         >
-          <span className="login-kakao-icon" aria-hidden="true">💬</span>
           {submitting ? '이동 중...' : '카카오로 시작하기'}
         </button>
 
