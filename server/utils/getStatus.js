@@ -3,9 +3,11 @@
 // - 1 ~ lowStockThreshold → '부족'
 // - 그 외 → '충분'
 // lowStockThreshold 기본 1 이면 기존 규칙(2개부터 넉넉)과 동일하다.
+const { clampThreshold } = require('./clampThreshold');
+
 function getStatus(quantity, lowStockThreshold = 1) {
   const q = Number(quantity) || 0;
-  const t = Math.min(99, Math.max(1, Number(lowStockThreshold) || 1));
+  const t = clampThreshold(lowStockThreshold);
   if (q <= 0) return '소진';
   if (q <= t) return '부족';
   return '충분';

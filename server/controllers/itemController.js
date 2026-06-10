@@ -3,48 +3,11 @@ const Item = require('../models/Item');
 const Stock = require('../models/Stock');
 const StockHistory = require('../models/StockHistory');
 const { destroyFromCloudinary } = require('../utils/cloudinary');
-const { getStatus } = require('../utils/getStatus');
 const { isValidCategoryId } = require('../utils/isValidCategoryId');
-
-function clampThreshold(value, fallback = 1) {
-  const n = Number(value);
-  if (Number.isNaN(n)) return fallback;
-  return Math.min(99, Math.max(1, Math.round(n)));
-}
-
-// 클라이언트가 다루기 쉬운 평탄한 형태로 정규화
-// - id 는 _id 의 문자열 표현 (Mongo ObjectId)
-// - quantity, status 는 Stock 에서 끌어와 한 객체로 합침
-function serializeItem(itemDoc, stockDoc) {
-  if (!itemDoc) return null;
-  const item = typeof itemDoc.toObject === 'function' ? itemDoc.toObject() : itemDoc;
-  const stock = stockDoc
-    ? typeof stockDoc.toObject === 'function'
-      ? stockDoc.toObject()
-      : stockDoc
-    : null;
-
-  const th = item.lowStockThreshold ?? 1;
-
-  return {
-    id: String(item._id),
-    name: item.name,
-    categoryId: item.categoryId,
-    image: item.image || null,
-    imagePublicId: item.imagePublicId || null,
-    unit: item.unit || '개',
-    lowStockThreshold: th,
-    notes: item.notes || '',
-    order: item.order ?? null,
-    quantity: stock?.quantity ?? 0,
-    status: stock?.status ?? getStatus(0, th),
-    consumptionRate: stock?.consumptionRate ?? null,
-    estimatedRunOut: stock?.estimatedRunOut ?? null,
-    lastUpdated: stock?.lastUpdated ?? null,
-    createdAt: item.createdAt,
-    updatedAt: item.updatedAt,
-  };
-}
+const { clampThreshold } = require('../utils/clampThreshold');
+const { serializeItem } = require('../utils/serializeItem');
+const { applyStockChange } = require('../utils/stockService');
+const { sendIfDuplicateKey } = require('../utils/duplicateKeyError');
 
 // GET /api/items
 // - query.categoryId 로 카테고리 필터 가능
@@ -127,11 +90,7 @@ async function createItem(req, res, next) {
 
     res.status(201).json(serializeItem(item, stock));
   } catch (err) {
-    if (err && err.code === 11000) {
-      return res
-        .status(409)
-        .json({ message: '같은 카테고리에 동일한 이름의 품목이 이미 있습니다.' });
-    }
+    if (sendIfDuplicateKey(res, err)) return;
     next(err);
   }
 }
@@ -181,36 +140,19 @@ async function updateItem(req, res, next) {
 
     await item.save();
 
-    // 수량도 함께 들어오면 Stock 업데이트 + 이력 기록
+    // 수량도 함께 들어오면 Stock 업데이트 + 이력 기록 (공용 헬퍼 사용)
     let stock = await Stock.findOne({ item: item._id });
     const threshold = item.lowStockThreshold ?? 1;
 
     if (quantity !== undefined) {
       const nextQuantity = Math.max(0, Number(quantity));
-      const quantityBefore = stock?.quantity ?? 0;
-
-      if (!stock) {
-        stock = new Stock({
-          item: item._id,
-          quantity: nextQuantity,
-          lowStockThreshold: threshold,
-        });
-      } else {
-        stock.quantity = nextQuantity;
-        stock.lowStockThreshold = threshold;
-      }
-      await stock.save();
-
-      if (quantityBefore !== nextQuantity) {
-        await StockHistory.create({
-          item: item._id,
-          quantityBefore,
-          quantityAfter: nextQuantity,
-        });
-      }
+      stock = await applyStockChange({
+        itemId: item._id,
+        nextQuantity,
+        threshold,
+      });
     } else if (lowStockThreshold !== undefined && stock) {
       stock.lowStockThreshold = threshold;
-      stock.status = getStatus(stock.quantity ?? 0, threshold);
       await stock.save();
     }
 
@@ -228,11 +170,7 @@ async function updateItem(req, res, next) {
 
     res.json(serializeItem(item, stock));
   } catch (err) {
-    if (err && err.code === 11000) {
-      return res
-        .status(409)
-        .json({ message: '같은 카테고리에 동일한 이름의 품목이 이미 있습니다.' });
-    }
+    if (sendIfDuplicateKey(res, err)) return;
     next(err);
   }
 }

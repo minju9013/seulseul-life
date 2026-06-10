@@ -31,44 +31,13 @@ const stockSchema = new Schema(
   },
 );
 
-// 하루를 ms 로 환산한 상수
-const DAY_MS = 1000 * 60 * 60 * 24;
-
-// 저장 직전에 자동으로 상태 및 관련 필드를 갱신하는 훅
-stockSchema.pre('save', async function preSave(next) {
-  const now = new Date();
-
+// 저장 직전에 상태(status)와 마지막 갱신 시각(lastUpdated)을 자동으로 맞춘다.
+// consumptionRate / estimatedRunOut 같은 소진 예측은 utils/stockService 가
+// 최근 이력 기준으로 일괄 계산하므로 여기서는 다루지 않는다.
+stockSchema.pre('save', function preSave(next) {
   const th = this.lowStockThreshold ?? 1;
   this.status = getStatus(this.quantity ?? 0, th);
-  this.lastUpdated = now;
-
-  // 새 문서가 아니고, quantity 가 변경된 경우에만 소진 속도 계산
-  if (!this.isNew && this.isModified('quantity')) {
-    try {
-      // 이전 값 조회 (lean() 으로 plain object 로 받음)
-      const previous = await this.constructor.findById(this._id).lean();
-
-      if (previous && typeof previous.quantity === 'number' && previous.lastUpdated) {
-        const quantityDiff = previous.quantity - this.quantity;
-        const daysDiff = (now - previous.lastUpdated) / DAY_MS;
-
-        // 수량이 줄었고, 실제로 시간이 흘렀을 때만 소진 속도 계산
-        if (quantityDiff > 0 && daysDiff > 0) {
-          const ratePerDay = quantityDiff / daysDiff;
-          this.consumptionRate = ratePerDay;
-
-          // 소진 속도와 남은 수량이 있을 때만 예상 소진일 계산
-          if (ratePerDay > 0 && this.quantity > 0) {
-            const daysLeft = this.quantity / ratePerDay;
-            this.estimatedRunOut = new Date(now.getTime() + daysLeft * DAY_MS);
-          }
-        }
-      }
-    } catch (err) {
-      return next(err);
-    }
-  }
-
+  this.lastUpdated = new Date();
   return next();
 });
 
