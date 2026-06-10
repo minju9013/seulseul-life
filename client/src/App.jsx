@@ -11,14 +11,13 @@ import Toast from './components/Toast';
 import CategorySortSheet from './components/CategorySortSheet';
 import useItems from './hooks/useItems';
 import useCategories from './hooks/useCategories';
+import useItemFilters from './hooks/useItemFilters';
+import useToast from './hooks/useToast';
 import { ALL_CATEGORY_ID } from './data/categories';
 import './App.css';
 
 function App() {
   const [activeCategoryId, setActiveCategoryId] = useState(ALL_CATEGORY_ID);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortKey, setSortKey] = useState('recent');
   const [isAddOpen, setAddOpen] = useState(false);
   const [isAddCategoryOpen, setAddCategoryOpen] = useState(false);
   const [isEditingCategories, setEditingCategories] = useState(false);
@@ -27,7 +26,6 @@ function App() {
   const [isCategorySortOpen, setCategorySortOpen] = useState(false);
   const [searchExpanded, setSearchExpanded] = useState(false);
   const [editingItemId, setEditingItemId] = useState(null);
-  const [toast, setToast] = useState(null);
 
   const searchInputRef = useRef(null);
 
@@ -54,14 +52,21 @@ function App() {
     MAX_LABEL_LENGTH,
   } = useCategories();
 
-  const showToast = (messageOrOpts) => {
-    const base = { id: Date.now() };
-    if (typeof messageOrOpts === 'string') {
-      setToast({ ...base, message: messageOrOpts });
-    } else if (messageOrOpts && typeof messageOrOpts === 'object') {
-      setToast({ ...base, ...messageOrOpts });
-    }
-  };
+  const { toast, showToast, dismissToast } = useToast();
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    sortKey,
+    setSortKey,
+    itemsInCategory,
+    filteredItems,
+    sortedDisplayItems,
+    isFiltering,
+    clearAllFilters,
+  } = useItemFilters(items, activeCategoryId);
 
   const handleQuantityChange = async (id, nextQuantity) => {
     const row = items.find((it) => it.id === id);
@@ -199,60 +204,6 @@ function App() {
     () => items.find((it) => it.id === editingItemId) || null,
     [items, editingItemId],
   );
-
-  const itemsInCategory = useMemo(
-    () =>
-      activeCategoryId === ALL_CATEGORY_ID
-        ? items
-        : items.filter((item) => item.categoryId === activeCategoryId),
-    [items, activeCategoryId],
-  );
-
-  const filteredItems = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return itemsInCategory.filter((item) => {
-      if (query && !(item.name || '').toLowerCase().includes(query)) {
-        return false;
-      }
-      if (statusFilter === 'shopping') {
-        if (item.status !== '부족해요' && item.status !== '소진') return false;
-      } else if (statusFilter === 'empty') {
-        if (item.status !== '소진') return false;
-      }
-      return true;
-    });
-  }, [itemsInCategory, searchQuery, statusFilter]);
-
-  const sortedDisplayItems = useMemo(() => {
-    const arr = [...filteredItems];
-    switch (sortKey) {
-      case 'name':
-        arr.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
-        break;
-      case 'qtyAsc':
-        arr.sort((a, b) => (a.quantity ?? 0) - (b.quantity ?? 0));
-        break;
-      case 'qtyDesc':
-        arr.sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
-        break;
-      case 'recent':
-      default:
-        arr.sort((a, b) => {
-          const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
-          const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
-          return tb - ta;
-        });
-    }
-    return arr;
-  }, [filteredItems, sortKey]);
-
-  const isFiltering =
-    Boolean(searchQuery.trim()) || (statusFilter && statusFilter !== 'all');
-
-  const clearAllFilters = () => {
-    setSearchQuery('');
-    setStatusFilter('all');
-  };
 
   const activeCategory = getCategoryById(activeCategoryId);
 
@@ -392,7 +343,7 @@ function App() {
           message={toast?.message}
           actionLabel={toast?.actionLabel}
           onAction={toast?.onAction}
-          onDismiss={() => setToast(null)}
+          onDismiss={dismissToast}
         />
       </div>
     </div>
