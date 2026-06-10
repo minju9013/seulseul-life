@@ -50,7 +50,12 @@ export function AuthProvider({ children }) {
       if (!supabase) return Promise.resolve();
       return supabase.auth.signInWithOAuth({
         provider: 'kakao',
-        options: { redirectTo: window.location.origin },
+        options: {
+          redirectTo: window.location.origin,
+          // account_email 은 카카오 비즈앱/동의항목 설정이 없으면 400 오류가 난다.
+          // 로그인에는 닉네임·프로필만으로 충분하다.
+          scopes: 'profile_nickname profile_image',
+        },
       });
     };
 
