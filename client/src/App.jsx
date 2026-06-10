@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import AppBar from './components/AppBar';
 import CategoryTabs from './components/CategoryTabs';
 import ItemCardList from './components/ItemCardList';
@@ -29,6 +29,24 @@ function App() {
 
   const searchInputRef = useRef(null);
 
+  const { toast, showToast, dismissToast } = useToast();
+
+  // 수량 커밋(디바운스 후 서버 반영)이 끝나면 한 번만 토스트로 알린다.
+  const handleQuantityCommitted = useCallback(
+    (info) => {
+      if (info.error) {
+        showToast(info.error.message || '수량 변경에 실패했어요');
+        return;
+      }
+      showToast({
+        message: `${info.name || '품목'} 수량을 ${info.quantity}개로 바꿨어요`,
+        actionLabel: '되돌리기',
+        onAction: info.revert,
+      });
+    },
+    [showToast],
+  );
+
   const {
     items,
     isLoading,
@@ -36,9 +54,10 @@ function App() {
     refresh,
     addItem,
     editItem,
-    changeQuantity,
+    stepQuantity,
+    setQuantity,
     removeItem,
-  } = useItems();
+  } = useItems({ onQuantityCommitted: handleQuantityCommitted });
 
   const {
     categories,
@@ -51,8 +70,6 @@ function App() {
     reorderCategory,
     MAX_LABEL_LENGTH,
   } = useCategories();
-
-  const { toast, showToast, dismissToast } = useToast();
 
   const {
     searchQuery,
@@ -67,31 +84,6 @@ function App() {
     isFiltering,
     clearAllFilters,
   } = useItemFilters(items, activeCategoryId);
-
-  const handleQuantityChange = async (id, nextQuantity) => {
-    const row = items.find((it) => it.id === id);
-    const prev = row?.quantity ?? 0;
-    const label = row?.name || '품목';
-
-    if (prev === nextQuantity) return;
-
-    try {
-      await changeQuantity(id, nextQuantity);
-      showToast({
-        message: `${label} 수량을 ${nextQuantity}개로 바꿨어요`,
-        actionLabel: '되돌리기',
-        onAction: async () => {
-          try {
-            await changeQuantity(id, prev);
-          } catch (e) {
-            showToast(e?.message || '되돌리기에 실패했어요');
-          }
-        },
-      });
-    } catch (err) {
-      showToast(err?.message || '수량 변경에 실패했어요');
-    }
-  };
 
   const handleAddItem = async (payload) => {
     await addItem(payload);
@@ -266,7 +258,8 @@ function App() {
           getCategoryById={getCategoryById}
           isFiltering={isFiltering}
           onClearFilters={clearAllFilters}
-          onQuantityChange={handleQuantityChange}
+          onStepQuantity={stepQuantity}
+          onSetQuantity={setQuantity}
           onEdit={(item) => setEditingItemId(item.id)}
           isLoading={isLoading}
         />

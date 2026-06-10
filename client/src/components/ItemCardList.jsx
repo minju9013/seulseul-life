@@ -10,7 +10,8 @@ function ItemCardList({
   isFiltering = false,
   isLoading = false,
   onClearFilters,
-  onQuantityChange,
+  onStepQuantity,
+  onSetQuantity,
   onEdit,
 }) {
   if (isLoading && (!items || items.length === 0)) {
@@ -114,7 +115,8 @@ function ItemCardList({
             key={item.id}
             item={item}
             categoryEmoji={getCategoryById?.(item.categoryId)?.emoji}
-            onQuantityChange={onQuantityChange}
+            onStepQuantity={onStepQuantity}
+            onSetQuantity={onSetQuantity}
             onEdit={onEdit}
           />
         ))}

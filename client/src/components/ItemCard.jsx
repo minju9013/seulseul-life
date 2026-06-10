@@ -14,21 +14,20 @@ function clampQuantity(value) {
   return n;
 }
 
-function ItemCard({ item, categoryEmoji, onQuantityChange, onEdit }) {
+function ItemCard({ item, categoryEmoji, onStepQuantity, onSetQuantity, onEdit }) {
   const statusClass = STATUS_STYLES[item.status] || 'is-empty';
   const displayQuantity = typeof item.quantity === 'number' ? item.quantity : 0;
   const hasNotes = Boolean((item.notes || '').trim());
 
+  // 연타 시 누락을 막기 위해 절대값이 아니라 증감량(delta)을 넘긴다.
+  // 실제 다음 수량 계산/클램프는 캐시 기준으로 useItems 가 처리한다.
   const handleStep = (delta) => {
-    const next = clampQuantity(displayQuantity + delta);
-    if (next !== displayQuantity) {
-      onQuantityChange(item.id, next);
-    }
+    onStepQuantity?.(item.id, delta);
   };
 
   const handleInputChange = (e) => {
     const next = clampQuantity(e.target.value);
-    onQuantityChange(item.id, next);
+    onSetQuantity?.(item.id, next);
   };
 
   // 카테고리에서 이모지를 받아오고, 못 찾으면 기본 박스 이모지로 fallback.
