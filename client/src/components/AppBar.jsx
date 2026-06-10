@@ -58,14 +58,14 @@ function AppBar({ onSearchClick, searchHighlighted = false, onSignOut }) {
                 aria-hidden="true"
               >
                 <path
-                  d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3"
+                  d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
                 <path
-                  d="M10 8l-4 4 4 4M6 12h10"
+                  d="M16 17l5-5-5-5M21 12H9"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
