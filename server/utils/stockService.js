@@ -40,12 +40,19 @@ async function computeConsumptionRate(itemId) {
 // - 수량이 실제로 바뀌면 StockHistory 에 이력을 남긴다.
 // - 최근 이력으로 소진율/예상 소진일을 갱신한다.
 // 상태(status)와 lastUpdated 는 Stock 모델의 pre('save') 훅이 자동 계산한다.
-async function applyStockChange({ itemId, nextQuantity, threshold, now = new Date() }) {
+async function applyStockChange({
+  itemId,
+  householdId,
+  nextQuantity,
+  threshold,
+  now = new Date(),
+}) {
   let stock = await Stock.findOne({ item: itemId });
   const quantityBefore = stock?.quantity ?? 0;
 
   if (!stock) {
     stock = new Stock({
+      householdId,
       item: itemId,
       quantity: nextQuantity,
       lowStockThreshold: threshold,
@@ -57,6 +64,7 @@ async function applyStockChange({ itemId, nextQuantity, threshold, now = new Dat
 
   if (quantityBefore !== nextQuantity) {
     await StockHistory.create({
+      householdId,
       item: itemId,
       quantityBefore,
       quantityAfter: nextQuantity,

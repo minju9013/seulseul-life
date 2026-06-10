@@ -39,6 +39,35 @@
   white-space: nowrap;
 }
 
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.app-bar-signout-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.app-bar-signout-btn:hover {
+  color: #1e293b;
+}
+
+.app-bar-signout-btn:active {
+  transform: scale(0.97);
+}
+
 .app-bar-search-btn {
   width: 44px;
   height: 44px;

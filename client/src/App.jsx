@@ -13,6 +13,7 @@ import useItems from './hooks/useItems';
 import useCategories from './hooks/useCategories';
 import useItemFilters from './hooks/useItemFilters';
 import useToast from './hooks/useToast';
+import { useAuth } from './auth/AuthProvider';
 import { ALL_CATEGORY_ID } from './data/categories';
 import './App.css';
 
@@ -28,6 +29,8 @@ function App() {
   const [editingItemId, setEditingItemId] = useState(null);
 
   const searchInputRef = useRef(null);
+
+  const { signOut } = useAuth();
 
   const { toast, showToast, dismissToast } = useToast();
 
@@ -210,6 +213,7 @@ function App() {
         <AppBar
           onSearchClick={handleSearchToggle}
           searchHighlighted={showSearchBar}
+          onSignOut={signOut}
         />
         {showSearchBar && (
           <SearchBar

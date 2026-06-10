@@ -1,39 +1,14 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL
-  ? `${import.meta.env.VITE_API_BASE_URL}/api`
-  : '/api';
+import { apiFetch } from './http';
 
-class ApiError extends Error {
-  constructor(message, status) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-  }
+export function getPreferences() {
+  return apiFetch('/preferences');
 }
 
-async function parseJsonOrThrow(res) {
-  let body;
-  try {
-    body = await res.json();
-  } catch {
-    body = null;
-  }
-  if (!res.ok) {
-    const message = body?.message || `요청 실패 (${res.status})`;
-    throw new ApiError(message, res.status);
-  }
-  return body;
+export function putPreferences(payload) {
+  return apiFetch('/preferences', { method: 'PUT', body: payload });
 }
 
-export async function getPreferences() {
-  const res = await fetch(`${API_BASE}/preferences`);
-  return parseJsonOrThrow(res);
-}
-
-export async function putPreferences(payload) {
-  const res = await fetch(`${API_BASE}/preferences`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  return parseJsonOrThrow(res);
+// 현재 로그인한 사용자/가구 정보
+export function getMe() {
+  return apiFetch('/auth/me');
 }

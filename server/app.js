@@ -8,6 +8,8 @@ const itemRoutes = require('./routes/items');
 const stockRoutes = require('./routes/stocks');
 const uploadRoutes = require('./routes/uploads');
 const preferencesRoutes = require('./routes/preferences');
+const authRoutes = require('./routes/auth');
+const { requireAuth, attachHousehold } = require('./middlewares/auth');
 
 const app = express();
 
@@ -34,8 +36,15 @@ app.get('/api/ping', (req, res) => {
   res.json({ ok: true, time: new Date() });
 });
 
-// 도메인별 라우터 등록
+// 카테고리 목록은 정적 데이터라 인증 없이 공개
 app.use('/api/categories', categoryRoutes);
+
+// 이하 라우터는 모두 로그인 + 가구 컨텍스트가 필요
+// requireAuth → JWT 검증, attachHousehold → 사용자/가구 보장 후 req.householdId 주입
+app.use('/api', requireAuth, attachHousehold);
+
+// 도메인별 라우터 등록 (인증 적용됨)
+app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/uploads', uploadRoutes);

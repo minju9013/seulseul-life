@@ -6,6 +6,13 @@ const { Schema } = mongoose;
 // 재고 수량 변경 이력을 쌓는 스키마
 const stockHistorySchema = new Schema(
   {
+    // 이 이력이 속한 가구
+    householdId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Household',
+      required: true,
+      index: true,
+    },
     // 어떤 아이템의 재고가 변경되었는지 (Item 컬렉션 참조)
     item: { type: Schema.Types.ObjectId, ref: 'Item', required: true },
     // 변경 전 수량

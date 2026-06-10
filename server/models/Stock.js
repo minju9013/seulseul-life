@@ -7,6 +7,13 @@ const { Schema } = mongoose;
 // 아이템별 현재 재고 상태를 저장하는 스키마
 const stockSchema = new Schema(
   {
+    // 이 재고가 속한 가구
+    householdId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Household',
+      required: true,
+      index: true,
+    },
     // 어떤 아이템의 재고인지 (Item 컬렉션 참조)
     item: { type: Schema.Types.ObjectId, ref: 'Item', required: true },
     // 현재 남아 있는 수량 (0 이상, 기본값 0)

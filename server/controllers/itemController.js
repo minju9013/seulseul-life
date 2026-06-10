@@ -16,14 +16,17 @@ async function getItems(req, res, next) {
   try {
     const { categoryId } = req.query;
 
-    const filter = {};
+    const filter = { householdId: req.householdId };
     if (categoryId) {
       filter.categoryId = categoryId;
     }
 
     const items = await Item.find(filter).sort({ order: 1, createdAt: 1 }).lean();
     const itemIds = items.map((item) => item._id);
-    const stocks = await Stock.find({ item: { $in: itemIds } }).lean();
+    const stocks = await Stock.find({
+      householdId: req.householdId,
+      item: { $in: itemIds },
+    }).lean();
     const stockMap = new Map(stocks.map((stock) => [String(stock.item), stock]));
 
     const result = items.map((item) =>
@@ -64,6 +67,7 @@ async function createItem(req, res, next) {
     const threshold = clampThreshold(lowStockThreshold, 1);
 
     const item = await Item.create({
+      householdId: req.householdId,
       name: String(name).trim(),
       categoryId: String(categoryId).trim(),
       unit: unit || '개',
@@ -75,6 +79,7 @@ async function createItem(req, res, next) {
     });
 
     const stock = await Stock.create({
+      householdId: req.householdId,
       item: item._id,
       quantity: initialQuantity,
       lowStockThreshold: threshold,
@@ -82,6 +87,7 @@ async function createItem(req, res, next) {
 
     if (initialQuantity > 0) {
       await StockHistory.create({
+        householdId: req.householdId,
         item: item._id,
         quantityBefore: 0,
         quantityAfter: initialQuantity,
@@ -112,7 +118,7 @@ async function updateItem(req, res, next) {
       notes,
     } = req.body;
 
-    const item = await Item.findById(id);
+    const item = await Item.findOne({ _id: id, householdId: req.householdId });
     if (!item) {
       return res
         .status(404)
@@ -148,6 +154,7 @@ async function updateItem(req, res, next) {
       const nextQuantity = Math.max(0, Number(quantity));
       stock = await applyStockChange({
         itemId: item._id,
+        householdId: req.householdId,
         nextQuantity,
         threshold,
       });
@@ -181,7 +188,10 @@ async function deleteItem(req, res, next) {
   try {
     const { id } = req.params;
 
-    const item = await Item.findByIdAndDelete(id);
+    const item = await Item.findOneAndDelete({
+      _id: id,
+      householdId: req.householdId,
+    });
     if (!item) {
       return res
         .status(404)

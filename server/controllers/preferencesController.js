@@ -1,8 +1,10 @@
 const UserPreferences = require('../models/UserPreferences');
 
+// GET /api/preferences
+// 현재 가구의 카테고리 설정을 반환 (없으면 빈 기본값)
 async function getPreferences(req, res, next) {
   try {
-    const doc = await UserPreferences.findOne({ key: 'singleton' }).lean();
+    const doc = await UserPreferences.findOne({ householdId: req.householdId }).lean();
     if (!doc) {
       return res.json({
         customCategories: [],
@@ -21,12 +23,14 @@ async function getPreferences(req, res, next) {
   }
 }
 
+// PUT /api/preferences
+// 현재 가구의 카테고리 설정을 저장 (없으면 생성)
 async function putPreferences(req, res, next) {
   try {
     const { customCategories, overrides, categoryOrder } = req.body;
 
     const doc = await UserPreferences.findOneAndUpdate(
-      { key: 'singleton' },
+      { householdId: req.householdId },
       {
         $set: {
           customCategories: Array.isArray(customCategories) ? customCategories : [],
