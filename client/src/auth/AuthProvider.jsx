@@ -48,14 +48,12 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => {
     const signInWithKakao = () => {
       if (!supabase) return Promise.resolve();
+      // scopes 는 Supabase 서버가 관리한다. 클라이언트에서 넘기면 서버 scope 와
+      // 중복·병합되어 account_email+profile_* 가 두 번 붙을 수 있다.
+      // 이메일 제외는 Supabase Kakao 설정의 "Allow users without an email" 로 처리한다.
       return supabase.auth.signInWithOAuth({
         provider: 'kakao',
-        options: {
-          redirectTo: window.location.origin,
-          // account_email 은 카카오 비즈앱/동의항목 설정이 없으면 400 오류가 난다.
-          // 로그인에는 닉네임·프로필만으로 충분하다.
-          scopes: 'profile_nickname profile_image',
-        },
+        options: { redirectTo: window.location.origin },
       });
     };
 
