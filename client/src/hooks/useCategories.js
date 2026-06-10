@@ -8,6 +8,7 @@ import {
   ALL_CATEGORY,
   ALL_CATEGORY_ID,
   CATEGORIES,
+  DEFAULT_HIDDEN_BUILTIN_IDS,
 } from '../data/categories';
 import { getPreferences, putPreferences } from '../api/preferencesApi';
 import usePersistentState from './usePersistentState';
@@ -24,6 +25,17 @@ function makeCustomCategoryId() {
 
 function isBuiltInId(id) {
   return CATEGORIES.some((c) => c.id === id);
+}
+
+function isBuiltInVisible(cat, overrides) {
+  if (overrides[cat.id] === null) return false;
+  if (
+    DEFAULT_HIDDEN_BUILTIN_IDS.includes(cat.id) &&
+    !(cat.id in overrides)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export default function useCategories() {
@@ -87,7 +99,7 @@ export default function useCategories() {
 
   const visibleBuiltIns = useMemo(
     () =>
-      CATEGORIES.filter((c) => overrides[c.id] !== null).map((c) => {
+      CATEGORIES.filter((c) => isBuiltInVisible(c, overrides)).map((c) => {
         const ov = overrides[c.id];
         return {
           ...c,

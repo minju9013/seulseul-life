@@ -65,6 +65,44 @@ async function resolveTargetHouseholdId() {
   return membership.householdId;
 }
 
+// 소유자 계정용 카테고리 탭(세면용품·휴지·세탁용품 등 기존 개인 설정)
+const OWNER_CATEGORY_PREFS = {
+  customCategories: [],
+  overrides: {
+    bathroom: { label: '세면용품', emoji: '🧼' },
+    tissue: { label: '휴지', emoji: '🧻' },
+    laundry: { label: '세탁용품', emoji: '🧺' },
+  },
+  categoryOrder: ['cosmetics', 'bathroom', 'tissue', 'laundry', 'kitchen'],
+};
+
+async function seedOwnerCategoryPreferences(householdId) {
+  if (!process.env.OWNER_EMAIL) return;
+
+  const existing = await UserPreferences.findOne({ householdId }).lean();
+  const hasCategoryConfig =
+    existing &&
+    ((Array.isArray(existing.customCategories) && existing.customCategories.length > 0) ||
+      (existing.overrides &&
+        typeof existing.overrides === 'object' &&
+        Object.keys(existing.overrides).length > 0) ||
+      (Array.isArray(existing.categoryOrder) && existing.categoryOrder.length > 0));
+
+  if (hasCategoryConfig) {
+    // eslint-disable-next-line no-console
+    console.log('카테고리 설정이 이미 있어 소유자 시드를 건너뜁니다.');
+    return;
+  }
+
+  await UserPreferences.findOneAndUpdate(
+    { householdId },
+    { $set: { householdId, ...OWNER_CATEGORY_PREFS } },
+    { upsert: true },
+  );
+  // eslint-disable-next-line no-console
+  console.log('소유자 카테고리 탭 설정을 적용했습니다.');
+}
+
 async function run() {
   await mongoose.connect(MONGODB_URI);
   // eslint-disable-next-line no-console
@@ -95,6 +133,8 @@ async function run() {
   await UserPreferences.collection.dropIndex('key_1').catch(() => {});
   await Item.syncIndexes();
   await UserPreferences.syncIndexes();
+
+  await seedOwnerCategoryPreferences(householdId);
 
   // eslint-disable-next-line no-console
   console.log('이관 완료:', {
